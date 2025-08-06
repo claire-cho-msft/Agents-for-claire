@@ -24,7 +24,7 @@ from microsoft.agents.authentication.msal import MsalConnectionManager
 from microsoft.agents.activity import load_configuration_from_env, ConversationUpdateTypes, ActivityTypes
 import re
 
-from agent_bot import AgentBot
+from agent import Agent
 
 # Load environment variables
 load_dotenv(path.join(path.dirname(__file__), ".env"))
@@ -62,14 +62,16 @@ AGENT_APP_INSTANCE = AgentApplication[TurnState](
     storage=STORAGE, adapter=ADAPTER, authorization=AUTHORIZATION, **agents_sdk_config
 )
 
+logger = logging.getLogger(__name__)
+
 # Create and configure the AgentBot
-AGENT = AgentBot(client)
+AGENT = Agent(client)
 AGENT.register_handlers(AGENT_APP_INSTANCE)
 
 # Listen for incoming requests on /api/messages
 async def messages(req: Request) -> Response:
     agent: AgentApplication = req.app["agent_app"]
-    adapter: CloudAdapter = req.app["adapter"]
+    adapter: CloudAdapter = req.app["adapter"]    
     return await start_agent_process(
         req,
         agent,

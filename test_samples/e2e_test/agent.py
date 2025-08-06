@@ -1,8 +1,6 @@
 from __future__ import annotations
 import json
 import re
-from typing import Optional, Union
-from os import environ
 
 from microsoft.agents.hosting.core import (
     AgentApplication,
@@ -15,31 +13,19 @@ from microsoft.agents.activity import (
     InvokeResponse,
     Activity,
     ConversationUpdateTypes,
-    ChannelAccount, 
     Attachment,
-    AdaptiveCardInvokeValue,
     EndOfConversationCodes
 )
 
-from agents import (
-    Agent as OpenAIAgent,
-    Model,
-    ModelProvider,
-    OpenAIChatCompletionsModel,
-    RunConfig,
-    Runner,
-    ModelSettings
-)
+from microsoft.agents.hosting.teams import TeamsActivityHandler
 
 
-from pydantic import BaseModel, Field
-from semantic_kernel import Kernel
 from semantic_kernel.contents import ChatHistory
 from weather.agents.weather_forecast_agent import WeatherForecastAgent
 
 from openai import AsyncAzureOpenAI
 
-class Agent:
+class Agent():
     def __init__(self, client: AsyncAzureOpenAI):
         self.client = client
         self.multiple_message_pattern = re.compile(r"(\w+)\s+(\d+)")
@@ -105,6 +91,7 @@ class Agent:
             counter += 1
 
         state.set_value("ConversationState.counter", counter)
+        state.save(context)
 
     async def on_poem_message(self, context: TurnContext, state: TurnState):
         try:
@@ -198,6 +185,8 @@ class Agent:
         await context.send_activity(f"[{counter}] You said: {context.activity.text}")
         counter += 1
         state.set_value("ConversationState.counter", counter)
+        
+        await state.save(context)
 
     async def on_invoke(self, context: TurnContext, state: TurnState):
         

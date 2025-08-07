@@ -42,6 +42,8 @@ class Agent():
         agent_app.activity(ActivityTypes.invoke)(self.on_invoke)
         agent_app.message_reaction("reactionsAdded")(self.on_reaction_added)
         agent_app.message_reaction("reactionsRemoved")(self.on_reaction_removed)
+        agent_app.activity(ActivityTypes.message_update)(self.on_message_edit)
+        agent_app.activity(ActivityTypes.event)(self.on_meeting_events)
         
     async def on_members_added(self, context: TurnContext, _state: TurnState):
         await context.send_activity(MessageFactory.text("Hello and Welcome!"))
@@ -91,7 +93,7 @@ class Agent():
             counter += 1
 
         state.set_value("ConversationState.counter", counter)
-        state.save(context)
+        await state.save(context)
 
     async def on_poem_message(self, context: TurnContext, state: TurnState):
         try:
@@ -189,15 +191,88 @@ class Agent():
         await state.save(context)
 
     async def on_invoke(self, context: TurnContext, state: TurnState):
-        
+
+        # Simulate Teams extensions until implemented
         if context.activity.name == "adaptiveCard/action":
             await self.on_action_execute(context, state)
-            return
-        
-        invoke_response = InvokeResponse(
-            status=200, body={"message": "Invoke received.", "data": context.activity.value}
-        )
-        
-        await context.send_activity(
-            Activity(type=ActivityTypes.invoke_response, value=invoke_response)
-        )
+        elif context.activity.name == "composeExtension/query":
+            invoke_response = InvokeResponse(
+                status=200,
+                body={
+                    "ComposeExtension": {
+                        "type": "result",
+                        "AttachmentLayout": "list",
+                        "Attachments": [
+                            {"content_type": "test", "content_url": "example.com"}
+                        ],
+                    }
+                },
+            )
+
+            await context.send_activity(
+                Activity(type=ActivityTypes.invoke_response, value=invoke_response)
+            )
+        elif context.activity.name == "composeExtension/queryLink":
+            invoke_response = InvokeResponse(
+                status=200,
+                body={
+                    "ChannelId": "msteams",
+                    "ComposeExtension": {
+                        "type": "result",
+                        "text": "On Query Link",
+                    },
+                },
+            )
+            await context.send_activity(
+                Activity(type=ActivityTypes.invoke_response, value=invoke_response)
+            )
+        elif context.activity.name == "composeExtension/selectItem":
+            value = context.activity.value
+            invoke_response = InvokeResponse(
+                status=200,
+                body={
+                    "ChannelId": "msteams",
+                    "ComposeExtension": {
+                        "type": "result",
+                        "AttachmentLayout": "list",
+                        "Attachments": [
+                            {
+                                "contenttype": "application/vnd.microsoft.card.thumbnail",
+                                "content": {
+                                    "title": f"{value['id']}, {value['version']}"
+                                },
+                            }
+                        ],
+                    },
+                },
+            )
+            await context.send_activity(
+                Activity(type=ActivityTypes.invoke_response, value=invoke_response)
+            )
+        else:
+            invoke_response = InvokeResponse(
+                status=200,
+                body={"message": "Invoke received.", "data": context.activity.value},
+            )
+
+            await context.send_activity(
+                Activity(type=ActivityTypes.invoke_response, value=invoke_response)
+            )
+
+    async def on_message_edit(self, context: TurnContext, state: TurnState):
+        await context.send_activity(f"Message Edited: {context.activity.id}")
+
+    async def on_meeting_events(self, context: TurnContext, state: TurnState):
+        if context.activity.name == "application/vnd.microsoft.meetingStart":
+            await context.send_activity(
+                f"Meeting started with ID: {context.activity.value['id']}"
+            )
+        elif context.activity.name == "application/vnd.microsoft.meetingEnd":
+            await context.send_activity(
+                f"Meeting ended with ID: {context.activity.value['id']}"
+            )
+        elif (
+            context.activity.name == "application/vnd.microsoft.meetingParticipantJoin"
+        ):
+            await context.send_activity("Welcome to the meeting!")
+

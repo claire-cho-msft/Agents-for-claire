@@ -271,8 +271,8 @@ class Agent():
             await context.send_activity(
                 f"Meeting ended with ID: {context.activity.value['id']}"
             )
-        elif (
-            context.activity.name == "application/vnd.microsoft.meetingParticipantJoin"
-        ):
+        elif context.activity.name == "application/vnd.microsoft.meetingParticipantJoin":
             await context.send_activity("Welcome to the meeting!")
+        else:
+            await context.send_activity("Received an event: " + context.activity.name)
 

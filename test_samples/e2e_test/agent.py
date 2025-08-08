@@ -43,7 +43,7 @@ class Agent():
         agent_app.message_reaction("reactionsAdded")(self.on_reaction_added)
         agent_app.message_reaction("reactionsRemoved")(self.on_reaction_removed)
         agent_app.activity(ActivityTypes.message_update)(self.on_message_edit)
-        agent_app.activity(ActivityTypes.event)(self.on_meeting_events)
+        agent_app.activity(ActivityTypes.event)(self.on_event)
         
     async def on_members_added(self, context: TurnContext, _state: TurnState):
         await context.send_activity(MessageFactory.text("Hello and Welcome!"))
@@ -262,7 +262,7 @@ class Agent():
     async def on_message_edit(self, context: TurnContext, state: TurnState):
         await context.send_activity(f"Message Edited: {context.activity.id}")
 
-    async def on_meeting_events(self, context: TurnContext, state: TurnState):
+    async def on_event(self, context: TurnContext, state: TurnState):
         if context.activity.name == "application/vnd.microsoft.meetingStart":
             await context.send_activity(
                 f"Meeting started with ID: {context.activity.value['id']}"

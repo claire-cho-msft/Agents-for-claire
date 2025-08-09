@@ -14,7 +14,8 @@ from microsoft.agents.activity import (
     Activity,
     ConversationUpdateTypes,
     Attachment,
-    EndOfConversationCodes
+    EndOfConversationCodes,
+    DeliveryModes
 )
 
 from microsoft.agents.hosting.teams import TeamsActivityHandler
@@ -24,6 +25,7 @@ from semantic_kernel.contents import ChatHistory
 from weather.agents.weather_forecast_agent import WeatherForecastAgent
 
 from openai import AsyncAzureOpenAI
+import asyncio
 
 class Agent():
     def __init__(self, client: AsyncAzureOpenAI):
@@ -38,6 +40,7 @@ class Agent():
         agent_app.message(self.multiple_message_pattern)(self.on_multiple_message)
         agent_app.message(re.compile(r"^poem$"))(self.on_poem_message)
         agent_app.message(re.compile(r"^end$"))(self.on_end_message)
+        agent_app.message(re.compile(r"^stream$"))(self.on_stream_message)
         agent_app.activity(ActivityTypes.message)(self.on_message)
         agent_app.activity(ActivityTypes.invoke)(self.on_invoke)
         agent_app.message_reaction("reactionsAdded")(self.on_reaction_added)
@@ -47,6 +50,14 @@ class Agent():
         
     async def on_members_added(self, context: TurnContext, _state: TurnState):
         await context.send_activity(MessageFactory.text("Hello and Welcome!"))
+
+    async def on_stream_message(self, context: TurnContext, state: TurnState):
+        if context.activity.delivery_mode == DeliveryModes.stream:
+            for x in range(1, 5):
+                await asyncio.sleep(1)
+                await context.send_activity("Stream response " + str(x))
+        else:
+            await context.send_activity("Activity is not set to stream for delivery mode")
 
     async def on_weather_message(self, context: TurnContext, state: TurnState):
         
@@ -199,11 +210,11 @@ class Agent():
             invoke_response = InvokeResponse(
                 status=200,
                 body={
-                    "ComposeExtension": {
+                    "composeExtension": {
                         "type": "result",
-                        "AttachmentLayout": "list",
-                        "Attachments": [
-                            {"content_type": "test", "content_url": "example.com"}
+                        "attachmentLayout": "list",
+                        "attachments": [
+                            {"contentType": "test", "contentUrl": "example.com"}
                         ],
                     }
                 },
@@ -216,8 +227,8 @@ class Agent():
             invoke_response = InvokeResponse(
                 status=200,
                 body={
-                    "ChannelId": "msteams",
-                    "ComposeExtension": {
+                    "channelId": "msteams",
+                    "composeExtension": {
                         "type": "result",
                         "text": "On Query Link",
                     },
@@ -231,13 +242,13 @@ class Agent():
             invoke_response = InvokeResponse(
                 status=200,
                 body={
-                    "ChannelId": "msteams",
-                    "ComposeExtension": {
+                    "channelId": "msteams",
+                    "composeExtension": {
                         "type": "result",
-                        "AttachmentLayout": "list",
-                        "Attachments": [
+                        "attachmentLayout": "list",
+                        "attachments": [
                             {
-                                "contenttype": "application/vnd.microsoft.card.thumbnail",
+                                "contentType": "application/vnd.microsoft.card.thumbnail",
                                 "content": {
                                     "title": f"{value['id']}, {value['version']}"
                                 },
